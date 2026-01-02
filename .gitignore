@@ -1,2 +1,5 @@
 .cpcache/
 .secrets.toml
+
+/tmp/*
+!/tmp/.keep

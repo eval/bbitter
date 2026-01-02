@@ -16,14 +16,11 @@
 
 (defn parse-args [args]
   (loop [args args
-         opts {:count 20}]
+         opts {}]
     (if (empty? args)
       opts
       (let [[arg & rest-args] args]
         (cond
-          (or (= arg "-n") (= arg "--count"))
-          (recur (rest rest-args) (assoc opts :count (parse-long (first rest-args))))
-
           (= arg "--json")
           (recur rest-args (assoc opts :json true))
 
@@ -50,7 +47,6 @@
   (println)
   (println "Options:")
   (println "  --all           Fetch from all accounts in accounts.edn")
-  (println "  -n, --count N   Number of tweets per account (default: 20)")
   (println "  --json          Output raw JSON"))
 
 (defn load-accounts []
@@ -58,13 +54,13 @@
       (edn/read-string)
       :accounts))
 
-(defn fetch-all-accounts [credentials oauth-session opts]
+(defn fetch-all-accounts [credentials oauth-session]
   (let [accounts (load-accounts)]
     (println (str "Fetching from " (count accounts) " accounts...\n"))
     (->> accounts
          (mapcat (fn [handle]
                    (println (str "  @" handle))
-                   (let [result (api/fetch-tweets-by-screen-name handle credentials oauth-session opts)]
+                   (let [result (api/fetch-tweets-by-screen-name handle credentials oauth-session)]
                      (if (:error result)
                        (do (println (str "    Error: " (:error result)))
                            [])
@@ -91,7 +87,7 @@
           (check-env)
           (let [credentials (oauth/load-credentials)
                 oauth-session (oauth/load-oauth-session)
-                tweets (fetch-all-accounts credentials oauth-session {:count (:count opts)})]
+                tweets (fetch-all-accounts credentials oauth-session)]
             (println)
             (if (:json opts)
               (println (json/generate-string tweets {:pretty true}))
@@ -106,8 +102,7 @@
                 oauth-session (oauth/load-oauth-session)
                 result (api/fetch-tweets-by-screen-name (:screen-name opts)
                                                         credentials
-                                                        oauth-session
-                                                        {:count (:count opts)})]
+                                                        oauth-session)]
             (if (:json opts)
               (println (json/generate-string result {:pretty true}))
               (if (:error result)
