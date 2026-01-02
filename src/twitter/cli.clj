@@ -35,9 +35,12 @@
           (recur rest-args (assoc opts :screen-name arg)))))))
 
 (defn format-tweet [tweet]
-  (let [{:keys [text author created-at retweet-count favorite-count]} tweet]
+  (let [{:keys [text author created-at retweet-count favorite-count is-retweet retweeted-from]} tweet]
     (str "─────────────────────────────────────────\n"
-         "@" (:screen-name author) " · " created-at "\n\n"
+         (if is-retweet
+           (str "@" (:screen-name author) " retweeted @" (:screen-name retweeted-from) " · " created-at)
+           (str "@" (:screen-name author) " · " created-at))
+         "\n\n"
          text "\n"
          "♻️ " retweet-count "  ❤️ " favorite-count)))
 

@@ -49,15 +49,31 @@
          (map (fn [entry]
                 (let [tweet-result (get-in entry [:content :content :tweetResult :result])
                       legacy (get-in tweet-result [:legacy])
-                      user-legacy (get-in tweet-result [:core :user_result :result :legacy])]
+                      user-legacy (get-in tweet-result [:core :user_result :result :legacy])
+                      ;; Check for retweet - get full text from original tweet
+                      retweet-result (get-in legacy [:retweeted_status_result :result])
+                      retweet-legacy (get-in retweet-result [:legacy])
+                      retweet-author (get-in retweet-result [:core :user_result :result :legacy])
+                      is-retweet (some? retweet-legacy)]
                   (when legacy
-                    {:id (:rest_id tweet-result)
-                     :text (:full_text legacy)
-                     :created-at (:created_at legacy)
-                     :author {:name (:name user-legacy)
-                              :screen-name (:screen_name user-legacy)}
-                     :retweet-count (:retweet_count legacy)
-                     :favorite-count (:favorite_count legacy)}))))
+                    (if is-retweet
+                      {:id (:rest_id tweet-result)
+                       :text (:full_text retweet-legacy)
+                       :created-at (:created_at legacy)
+                       :author {:name (:name user-legacy)
+                                :screen-name (:screen_name user-legacy)}
+                       :retweeted-from {:name (:name retweet-author)
+                                        :screen-name (:screen_name retweet-author)}
+                       :retweet-count (:retweet_count retweet-legacy)
+                       :favorite-count (:favorite_count retweet-legacy)
+                       :is-retweet true}
+                      {:id (:rest_id tweet-result)
+                       :text (:full_text legacy)
+                       :created-at (:created_at legacy)
+                       :author {:name (:name user-legacy)
+                                :screen-name (:screen_name user-legacy)}
+                       :retweet-count (:retweet_count legacy)
+                       :favorite-count (:favorite_count legacy)})))))
          (remove nil?))))
 
 (defn fetch-tweets-by-screen-name
