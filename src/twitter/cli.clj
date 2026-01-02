@@ -2,7 +2,17 @@
   (:require [twitter.api :as api]
             [twitter.oauth :as oauth]
             [cheshire.core :as json]
-            [clojure.string :as str]))
+            [clojure.edn :as edn]
+            [clojure.string :as str])
+  (:import (java.time ZonedDateTime)
+           (java.time.format DateTimeFormatter)
+           (java.util Locale)))
+
+(def twitter-date-formatter
+  (DateTimeFormatter/ofPattern "EEE MMM dd HH:mm:ss Z yyyy" Locale/ENGLISH))
+
+(defn parse-twitter-date [date-str]
+  (ZonedDateTime/parse date-str twitter-date-formatter))
 
 (defn parse-args [args]
   (loop [args args
@@ -16,6 +26,9 @@
 
           (= arg "--json")
           (recur rest-args (assoc opts :json true))
+
+          (= arg "--all")
+          (recur rest-args (assoc opts :all true))
 
           (str/starts-with? arg "-")
           (do (println "Unknown option:" arg)
@@ -33,10 +46,30 @@
 
 (defn print-usage []
   (println "Usage: bb tweets <screen-name> [options]")
+  (println "       bb tweets --all [options]")
   (println)
   (println "Options:")
-  (println "  -n, --count N   Number of tweets to fetch (default: 20)")
+  (println "  --all           Fetch from all accounts in accounts.edn")
+  (println "  -n, --count N   Number of tweets per account (default: 20)")
   (println "  --json          Output raw JSON"))
+
+(defn load-accounts []
+  (-> (slurp "accounts.edn")
+      (edn/read-string)
+      :accounts))
+
+(defn fetch-all-accounts [credentials oauth-session opts]
+  (let [accounts (load-accounts)]
+    (println (str "Fetching from " (count accounts) " accounts...\n"))
+    (->> accounts
+         (mapcat (fn [handle]
+                   (println (str "  @" handle))
+                   (let [result (api/fetch-tweets-by-screen-name handle credentials oauth-session opts)]
+                     (if (:error result)
+                       (do (println (str "    Error: " (:error result)))
+                           [])
+                       (:tweets result)))))
+         (sort-by #(parse-twitter-date (:created-at %)) #(.compareTo %2 %1)))))
 
 (defn check-env []
   (let [required ["TWITTER_CONSUMER_KEY" "TWITTER_CONSUMER_SECRET"
@@ -52,8 +85,21 @@
   (if (empty? args)
     (print-usage)
     (let [opts (parse-args args)]
-      (if (nil? (:screen-name opts))
-        (print-usage)
+      (cond
+        (:all opts)
+        (do
+          (check-env)
+          (let [credentials (oauth/load-credentials)
+                oauth-session (oauth/load-oauth-session)
+                tweets (fetch-all-accounts credentials oauth-session {:count (:count opts)})]
+            (println)
+            (if (:json opts)
+              (println (json/generate-string tweets {:pretty true}))
+              (doseq [tweet tweets]
+                (println (format-tweet tweet))
+                (println)))))
+
+        (:screen-name opts)
         (do
           (check-env)
           (let [credentials (oauth/load-credentials)
@@ -70,4 +116,7 @@
                   (println (str "Tweets from @" (:screen-name opts) "\n"))
                   (doseq [tweet (:tweets result)]
                     (println (format-tweet tweet))
-                    (println)))))))))))
+                    (println)))))))
+
+        :else
+        (print-usage)))))
