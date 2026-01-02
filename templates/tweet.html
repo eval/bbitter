@@ -405,6 +405,29 @@
           <a href="/tweet/{{reply.id}}" class="date">&middot; {{reply.time}}</a>
         </div>
         <div class="tweet-text">{{reply.text}}</div>
+        {% if reply.quoted-tweet %}
+        <a href="/tweet/{{reply.quoted-tweet.id}}" class="quoted-tweet">
+          <div class="quoted-header">
+            <img class="quoted-avatar" src="{{reply.quoted-tweet.author.avatar}}" alt="">
+            <span class="quoted-author">{{reply.quoted-tweet.author.name}}</span>
+            <span class="quoted-handle">@{{reply.quoted-tweet.author.screen-name}}</span>
+          </div>
+          <div class="quoted-text">{{reply.quoted-tweet.text}}</div>
+          {% if reply.quoted-tweet.media %}
+          <div class="quoted-media">
+            {% for m in reply.quoted-tweet.media %}
+            {% if m.type = "video" %}
+            <video controls playsinline poster="{{m.poster}}" onclick="event.preventDefault(); event.stopPropagation();">
+              <source src="{{m.url}}" type="video/mp4">
+            </video>
+            {% else %}
+            <img src="{{m.url}}" alt="" onclick="event.preventDefault(); event.stopPropagation(); openModal('{{m.url}}')">
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        {% endif %}
         {% if reply.media %}
         <div class="tweet-media" data-images="{% for m in reply.media %}{% if m.type = "image" %}{{m.url}},{% endif %}{% endfor %}">
           {% for m in reply.media %}

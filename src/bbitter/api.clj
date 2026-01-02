@@ -8,6 +8,14 @@
            [java.time.format DateTimeFormatter]
            [java.util Locale]))
 
+;; Text processing
+
+(defn strip-leading-mentions
+  "Remove leading @mentions from reply text."
+  [text]
+  (when text
+    (str/trim (str/replace text #"^(@\w+\s*)+" ""))))
+
 ;; Date formatting
 
 (def twitter-date-formatter
@@ -386,13 +394,16 @@
                         :author {:name (:name quote-user)
                                  :screen-name (:screen_name quote-user)
                                  :avatar (:profile_image_url_https quote-user)}
-                        :media quote-media})]
+                        :media quote-media})
+        in-reply-to (:in_reply_to_status_id_str legacy)
+        raw-text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
+        text (if in-reply-to (strip-leading-mentions raw-text) raw-text)]
     (when legacy
       (cond-> {:id (:rest_id tweet-result)
-               :text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
+               :text text
                :created-at (:created_at legacy)
                :time (format-relative-date (:created_at legacy))
-               :in-reply-to (:in_reply_to_status_id_str legacy)
+               :in-reply-to in-reply-to
                :conversation-id (:conversation_id_str legacy)
                :author {:name (:name user-legacy)
                         :screen-name (:screen_name user-legacy)
