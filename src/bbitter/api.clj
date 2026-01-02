@@ -92,6 +92,7 @@
                        :retweeted-from {:name (:name retweet-author)
                                         :screen-name (:screen_name retweet-author)
                                         :avatar (:profile_image_url_https retweet-author)}
+                       :reply-count (:reply_count retweet-legacy)
                        :retweet-count (:retweet_count retweet-legacy)
                        :favorite-count (:favorite_count retweet-legacy)
                        :media media
@@ -102,6 +103,7 @@
                        :author {:name (:name user-legacy)
                                 :screen-name (:screen_name user-legacy)
                                 :avatar (:profile_image_url_https user-legacy)}
+                       :reply-count (:reply_count legacy)
                        :retweet-count (:retweet_count legacy)
                        :favorite-count (:favorite_count legacy)
                        :media media})))))
@@ -119,3 +121,118 @@
          :raw tweets-response})
       {:error "User not found"
        :raw user-response})))
+
+;; Tweet conversation (detail with replies)
+
+(defn tweet-conversation-request [tweet-id]
+  {:method       :get
+   :base-url     "https://api.x.com/graphql/Vorskcd2tZ-tc4Gx3zbk4Q/ConversationTimelineV2"
+   :query-params {:variables {:focalTweetId            tweet-id
+                              :includeHasBirdwatchNotes false
+                              :includePromotedContent   false
+                              :withBirdwatchNotes       false
+                              :withVoice                false
+                              :withV2Timeline           true}
+                  :features  oauth/default-features}})
+
+(defn parse-tweet-result
+  "Parse a single tweet result into our tweet format."
+  [tweet-result]
+  (let [legacy (get-in tweet-result [:legacy])
+        user-legacy (get-in tweet-result [:core :user_result :result :legacy])
+        ;; Check for retweet
+        retweet-result (get-in legacy [:retweeted_status_result :result])
+        retweet-legacy (get-in retweet-result [:legacy])
+        retweet-author (get-in retweet-result [:core :user_result :result :legacy])
+        is-retweet (some? retweet-legacy)
+        ;; Extract media
+        source-legacy (if is-retweet retweet-legacy legacy)
+        raw-media (get-in source-legacy [:extended_entities :media])
+        media (not-empty
+               (->> raw-media
+                    (map (fn [m]
+                           (if (= (:type m) "video")
+                             (let [variants (get-in m [:video_info :variants])
+                                   mp4s (->> variants
+                                             (filter #(= (:content_type %) "video/mp4"))
+                                             (sort-by :bitrate >))
+                                   video-url (:url (first mp4s))]
+                               {:type "video"
+                                :url (proxy-video-url video-url)
+                                :poster (:media_url_https m)})
+                             {:type "image"
+                              :url (:media_url_https m)})))
+                    (remove #(nil? (:url %)))))]
+    (when legacy
+      (cond-> {:id (:rest_id tweet-result)
+               :text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
+               :created-at (:created_at legacy)
+               :in-reply-to (:in_reply_to_status_id_str legacy)
+               :conversation-id (:conversation_id_str legacy)
+               :author {:name (:name user-legacy)
+                        :screen-name (:screen_name user-legacy)
+                        :avatar (:profile_image_url_https user-legacy)}
+               :retweet-count (if is-retweet (:retweet_count retweet-legacy) (:retweet_count legacy))
+               :favorite-count (if is-retweet (:favorite_count retweet-legacy) (:favorite_count legacy))
+               :media media}
+        is-retweet (assoc :is-retweet true
+                          :retweeted-from {:name (:name retweet-author)
+                                           :screen-name (:screen_name retweet-author)
+                                           :avatar (:profile_image_url_https retweet-author)})))))
+
+(defn extract-conversation
+  "Extract the focal tweet and replies from a conversation response."
+  [response focal-tweet-id]
+  (let [instructions (get-in response [:data :timeline_response :instructions])
+        entries (->> instructions
+                     (filter #(= (:__typename %) "TimelineAddEntries"))
+                     first
+                     :entries)
+        ;; Find the focal tweet and replies, filtering out promoted content
+        all-items (mapcat (fn [entry]
+                            (let [entry-id (:entryId entry)
+                                  content (:content entry)]
+                              (cond
+                                ;; Skip promoted tweets
+                                (str/includes? entry-id "promoted")
+                                nil
+
+                                ;; Single tweet entry
+                                (str/starts-with? entry-id "tweet-")
+                                (when-let [tweet-result (get-in content [:content :tweetResult :result])]
+                                  [(assoc (parse-tweet-result tweet-result)
+                                          :entry-type :tweet)])
+
+                                ;; Conversation thread module (replies)
+                                (str/starts-with? entry-id "conversationthread-")
+                                (->> (get-in content [:items])
+                                     (map (fn [item]
+                                            (let [item-id (get-in item [:entryId] "")]
+                                              ;; Skip promoted items within threads
+                                              (when-not (str/includes? item-id "promoted")
+                                                (when-let [tweet-result (get-in item [:item :content :tweetResult :result])]
+                                                  (assoc (parse-tweet-result tweet-result)
+                                                         :entry-type :reply))))))
+                                     (remove nil?))
+
+                                :else nil)))
+                          entries)
+        focal-tweet (first (filter #(= (:id %) focal-tweet-id) all-items))
+        ;; Filter replies: must be in the same conversation as the focal tweet
+        replies (->> all-items
+                     (filter #(= (:entry-type %) :reply))
+                     (remove #(= (:id %) focal-tweet-id))
+                     ;; Only keep replies that are part of this conversation
+                     (filter #(= (:conversation-id %) focal-tweet-id)))]
+    {:tweet focal-tweet
+     :replies replies}))
+
+(defn fetch-tweet-conversation
+  "Fetch a tweet with its replies."
+  [tweet-id credentials oauth-session]
+  (let [response (oauth/make-request (tweet-conversation-request tweet-id)
+                                     credentials
+                                     oauth-session)
+        parsed (-> response :body (json/parse-string true))]
+    (assoc (extract-conversation parsed tweet-id)
+           :raw parsed)))

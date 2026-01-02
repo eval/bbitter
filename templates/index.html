@@ -83,6 +83,14 @@
       color: var(--text-muted);
     }
 
+    a.date {
+      text-decoration: none;
+    }
+
+    a.date:hover {
+      text-decoration: underline;
+    }
+
     .retweet-info {
       color: var(--text-muted);
       font-size: 0.85rem;
@@ -158,7 +166,7 @@
           <span class="author">{{tweet.author.name}}</span>
           <span class="handle">@{{tweet.author.screen-name}}</span>
           {% endif %}
-          <span class="date">&middot; {{tweet.created-at}}</span>
+          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.created-at}}</a>
         </div>
         {% if tweet.is-retweet %}
         <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>
@@ -178,6 +186,7 @@
         </div>
         {% endif %}
         <div class="stats">
+          <span>💬 {{tweet.reply-count}}</span>
           <span>🔁 {{tweet.retweet-count}}</span>
           <span>❤️ {{tweet.favorite-count}}</span>
         </div>

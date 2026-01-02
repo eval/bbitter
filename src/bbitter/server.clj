@@ -1,7 +1,11 @@
 (ns bbitter.server
   (:require [babashka.http-client :as http]
+            [bbitter.api :as api]
+            [bbitter.oauth :as oauth]
+            [bbitter.cli :as cli]
             [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [selmer.parser :as selmer])
   (:import [java.net ServerSocket URLDecoder]
            [java.io BufferedReader InputStreamReader OutputStream]))
 
@@ -84,9 +88,40 @@
        :headers {"Content-Type" "text/plain"}
        :body    "Failed to fetch video"})))
 
+;; Lazy-loaded credentials
+(def credentials (delay (oauth/load-credentials)))
+(def oauth-session (delay (oauth/load-oauth-session)))
+
+(defn render-tweet-page [tweet-id]
+  (try
+    (cli/check-env)
+    (println (str "Fetching tweet " tweet-id "..."))
+    (let [result (api/fetch-tweet-conversation tweet-id @credentials @oauth-session)
+          template (slurp "templates/tweet.html")]
+      (if (:tweet result)
+        {:status  "200 OK"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template
+                                 {:tweet       (:tweet result)
+                                  :replies     (:replies result)
+                                  :reply-count (count (:replies result))})}
+        {:status  "404 Not Found"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template {:tweet nil})}))
+    (catch Exception e
+      (println "Error fetching tweet:" (.getMessage e))
+      {:status  "500 Internal Server Error"
+       :headers {"Content-Type" "text/plain"}
+       :body    (str "Error: " (.getMessage e))})))
+
 (defn handle-request [request public-dir ^OutputStream out]
   (let [{:keys [path]} request]
     (cond
+      ;; Tweet detail page: /tweet/123456...
+      (re-matches #"/tweet/(\d+)" path)
+      (let [[_ tweet-id] (re-matches #"/tweet/(\d+)" path)]
+        (render-tweet-page tweet-id))
+
       ;; Video proxy: /proxy/video?url=...
       (str/starts-with? path "/proxy/video")
       (let [query-start (str/index-of path "?")
