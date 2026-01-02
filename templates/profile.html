@@ -258,7 +258,7 @@
           <span class="author">{{tweet.author.name}}</span>
           <span class="handle">@{{tweet.author.screen-name}}</span>
           {% endif %}
-          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.created-at}}</a>
+          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.time}}</a>
         </div>
         {% if tweet.is-retweet %}
         <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>

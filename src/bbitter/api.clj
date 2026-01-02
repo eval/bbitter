@@ -2,7 +2,45 @@
   (:require [bbitter.oauth :as oauth]
             [cheshire.core :as json]
             [clojure.string :as str])
-  (:import [java.net URLEncoder]))
+  (:import [java.net URLEncoder]
+           [java.time ZonedDateTime Instant Duration]
+           [java.time.format DateTimeFormatter]
+           [java.util Locale]))
+
+;; Date formatting
+
+(def twitter-date-formatter
+  (DateTimeFormatter/ofPattern "EEE MMM dd HH:mm:ss Z yyyy" Locale/ENGLISH))
+
+(defn parse-twitter-date [date-str]
+  (ZonedDateTime/parse date-str twitter-date-formatter))
+
+(defn format-relative-date
+  "Format a Twitter date string as a relative timestamp.
+   - < 1 min: '45s'
+   - < 1 hour: '5m'
+   - < 24 hours: '3h'
+   - < 6 months: '31 dec'
+   - >= 6 months: '6 jul 2025'"
+  [date-str]
+  (when date-str
+    (let [parsed (parse-twitter-date date-str)
+          now (ZonedDateTime/now)
+          seconds (.getSeconds (Duration/between parsed now))
+          minutes (quot seconds 60)
+          hours (quot seconds 3600)
+          days (quot seconds 86400)]
+      (cond
+        (< seconds 60)   (str seconds "s")
+        (< minutes 60)   (str minutes "m")
+        (< hours 24)     (str hours "h")
+        (< days 180)     (str (.getDayOfMonth parsed) " "
+                              (str/lower-case (.format parsed (DateTimeFormatter/ofPattern "MMM" Locale/ENGLISH))))
+        :else            (str (.getDayOfMonth parsed) " "
+                              (str/lower-case (.format parsed (DateTimeFormatter/ofPattern "MMM" Locale/ENGLISH)))
+                              " " (.getYear parsed))))))
+
+;; Video proxy
 
 (defn proxy-video-url
   "Convert a Twitter video URL to a proxy URL."
@@ -86,6 +124,7 @@
                       {:id (:rest_id tweet-result)
                        :text (:full_text retweet-legacy)
                        :created-at (:created_at legacy)
+                       :time (format-relative-date (:created_at legacy))
                        :author {:name (:name user-legacy)
                                 :screen-name (:screen_name user-legacy)
                                 :avatar (:profile_image_url_https user-legacy)}
@@ -100,6 +139,7 @@
                       {:id (:rest_id tweet-result)
                        :text (:full_text legacy)
                        :created-at (:created_at legacy)
+                       :time (format-relative-date (:created_at legacy))
                        :author {:name (:name user-legacy)
                                 :screen-name (:screen_name user-legacy)
                                 :avatar (:profile_image_url_https user-legacy)}
@@ -180,6 +220,7 @@
       (cond-> {:id (:rest_id tweet-result)
                :text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
                :created-at (:created_at legacy)
+               :time (format-relative-date (:created_at legacy))
                :in-reply-to (:in_reply_to_status_id_str legacy)
                :conversation-id (:conversation_id_str legacy)
                :author {:name (:name user-legacy)

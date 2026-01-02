@@ -179,7 +179,7 @@
           <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
           <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
           {% endif %}
-          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.created-at}}</a>
+          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.time}}</a>
         </div>
         {% if tweet.is-retweet %}
         <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>

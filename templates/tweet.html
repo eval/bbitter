@@ -217,7 +217,7 @@
           <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
           <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
           {% endif %}
-          <span class="date">&middot; {{tweet.created-at}}</span>
+          <span class="date">&middot; {{tweet.time}}</span>
         </div>
         {% if tweet.is-retweet %}
         <div class="retweet-info">Retweeted by <a href="/@{{tweet.author.screen-name}}">@{{tweet.author.screen-name}}</a></div>
@@ -253,7 +253,7 @@
         <div class="tweet-header">
           <a href="/@{{reply.author.screen-name}}" class="author">{{reply.author.name}}</a>
           <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
-          <span class="date">&middot; {{reply.created-at}}</span>
+          <span class="date">&middot; {{reply.time}}</span>
         </div>
         <div class="tweet-text">{{reply.text}}</div>
         {% if reply.media %}
