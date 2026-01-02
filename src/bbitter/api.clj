@@ -1,5 +1,6 @@
 (ns bbitter.api
-  (:require [bbitter.oauth :as oauth]
+  (:require [babashka.http-client :as http]
+            [bbitter.oauth :as oauth]
             [cheshire.core :as json]
             [clojure.string :as str])
   (:import [java.net URLEncoder]
@@ -174,6 +175,96 @@
          :raw tweets-response})
       {:error "User not found"
        :raw user-response})))
+
+;; Top tweets (highlights) - uses UserTweets endpoint with guest token auth
+
+(def twitter-bearer-token
+  "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA")
+
+(def user-tweets-features
+  "{\"rweb_video_screen_enabled\":false,\"profile_label_improvements_pcf_label_in_post_enabled\":true,\"responsive_web_profile_redirect_enabled\":false,\"rweb_tipjar_consumption_enabled\":true,\"verified_phone_label_enabled\":false,\"creator_subscriptions_tweet_preview_api_enabled\":true,\"responsive_web_graphql_timeline_navigation_enabled\":true,\"responsive_web_graphql_skip_user_profile_image_extensions_enabled\":false,\"premium_content_api_read_enabled\":false,\"communities_web_enable_tweet_community_results_fetch\":true,\"c9s_tweet_anatomy_moderator_badge_enabled\":true,\"responsive_web_grok_analyze_button_fetch_trends_enabled\":false,\"responsive_web_grok_analyze_post_followups_enabled\":false,\"responsive_web_jetfuel_frame\":true,\"responsive_web_grok_share_attachment_enabled\":true,\"responsive_web_grok_annotations_enabled\":false,\"articles_preview_enabled\":true,\"responsive_web_edit_tweet_api_enabled\":true,\"graphql_is_translatable_rweb_tweet_is_translatable_enabled\":true,\"view_counts_everywhere_api_enabled\":true,\"longform_notetweets_consumption_enabled\":true,\"responsive_web_twitter_article_tweet_consumption_enabled\":true,\"tweet_awards_web_tipping_enabled\":false,\"responsive_web_grok_show_grok_translated_post\":false,\"responsive_web_grok_analysis_button_from_backend\":true,\"creator_subscriptions_quote_tweet_preview_enabled\":false,\"freedom_of_speech_not_reach_fetch_enabled\":true,\"standardized_nudges_misinfo\":true,\"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled\":true,\"longform_notetweets_rich_text_read_enabled\":true,\"longform_notetweets_inline_media_enabled\":true,\"responsive_web_grok_image_annotation_enabled\":true,\"responsive_web_grok_imagine_annotation_enabled\":true,\"responsive_web_grok_community_note_auto_translation_is_enabled\":false,\"responsive_web_enhance_cards_enabled\":false}")
+
+(defn get-guest-token
+  "Get a guest token from Twitter."
+  []
+  (println "[guest-token] Fetching...")
+  (let [response (http/post "https://api.x.com/1.1/guest/activate.json"
+                            {:headers {"Authorization" (str "Bearer " twitter-bearer-token)}})
+        token (-> response :body (json/parse-string true) :guest_token)]
+    (println "[guest-token]" token)
+    token))
+
+(defn extract-user-tweets
+  "Extract tweets from UserTweets response."
+  [response]
+  (let [instructions (get-in response [:data :user :result :timeline :timeline :instructions])
+        entries (->> instructions
+                     (filter #(= (:type %) "TimelineAddEntries"))
+                     first
+                     :entries)]
+    (->> entries
+         (filter #(str/starts-with? (get % :entryId "") "tweet-"))
+         (map (fn [entry]
+                (let [tweet-result (get-in entry [:content :itemContent :tweet_results :result])
+                      legacy (:legacy tweet-result)
+                      user-result (get-in tweet-result [:core :user_results :result])
+                      user-core (:core user-result)
+                      user-avatar (get-in user-result [:avatar :image_url])
+                      ;; Extract media
+                      raw-media (get-in legacy [:extended_entities :media])
+                      media (not-empty
+                             (->> raw-media
+                                  (map (fn [m]
+                                         (if (= (:type m) "video")
+                                           (let [variants (get-in m [:video_info :variants])
+                                                 mp4s (->> variants
+                                                           (filter #(= (:content_type %) "video/mp4"))
+                                                           (sort-by :bitrate >))
+                                                 video-url (:url (first mp4s))]
+                                             {:type "video"
+                                              :url (proxy-video-url video-url)
+                                              :poster (:media_url_https m)})
+                                           {:type "image"
+                                            :url (:media_url_https m)})))
+                                  (remove #(nil? (:url %)))))]
+                  (when legacy
+                    {:id (:rest_id tweet-result)
+                     :text (:full_text legacy)
+                     :created-at (:created_at legacy)
+                     :time (format-relative-date (:created_at legacy))
+                     :author {:name (:name user-core)
+                              :screen-name (:screen_name user-core)
+                              :avatar (when user-avatar (str/replace user-avatar "_normal" "_400x400"))}
+                     :reply-count (:reply_count legacy)
+                     :retweet-count (:retweet_count legacy)
+                     :favorite-count (:favorite_count legacy)
+                     :media media}))))
+         (remove nil?))))
+
+(defn fetch-user-highlights
+  "Fetch highlights/top tweets for a user using guest token auth."
+  [user-id]
+  (let [guest-token (get-guest-token)
+        variables (json/generate-string {:userId user-id
+                                         :count 20
+                                         :includePromotedContent false
+                                         :withQuickPromoteEligibilityTweetFields false
+                                         :withVoice false})
+        _ (println "[highlights] Fetching for user" user-id)
+        response (http/get "https://api.x.com/graphql/Wms1GvIiHXAPBaCr9KblaA/UserTweets"
+                           {:headers {"Authorization" (str "Bearer " twitter-bearer-token)
+                                      "x-guest-token" guest-token
+                                      "Content-Type" "application/json"}
+                            :query-params {"variables" variables
+                                           "features" user-tweets-features
+                                           "fieldToggles" "{\"withArticlePlainText\":false}"}
+                            :throw false})
+        _ (println "[highlights] Status:" (:status response))]
+    (if (= 200 (:status response))
+      (extract-user-tweets (json/parse-string (:body response) true))
+      (do
+        (println "[highlights] Error:" (:body response))
+        nil))))
 
 ;; Tweet conversation (detail with replies)
 

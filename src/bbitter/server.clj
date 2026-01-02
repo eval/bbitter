@@ -134,9 +134,42 @@
        :headers {"Content-Type" "text/plain"}
        :body    (str "Error: " (.getMessage e))})))
 
+(defn render-top-tweets-page [screen-name]
+  (try
+    (cli/check-env)
+    (println (str "Fetching highlights for @" screen-name "..."))
+    (let [user-result (api/fetch-user-by-screen-name screen-name @credentials @oauth-session)
+          user-data (get-in user-result [:data :user_result :result])
+          user (when user-data (api/parse-user user-data))
+          _ (println "[debug] user:" user)
+          user-id (api/get-user-id user-result)
+          tweets (when user-id (api/fetch-user-highlights user-id))
+          _ (println "[debug] tweets count:" (count tweets))
+          template (slurp "templates/profile.html")]
+      (if user
+        {:status  "200 OK"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template
+                                 {:user   user
+                                  :tweets tweets
+                                  :top    true})}
+        {:status  "404 Not Found"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template {:user nil})}))
+    (catch Exception e
+      (println "Error fetching highlights:" (.getMessage e))
+      {:status  "500 Internal Server Error"
+       :headers {"Content-Type" "text/plain"}
+       :body    (str "Error: " (.getMessage e))})))
+
 (defn handle-request [request public-dir ^OutputStream out]
   (let [{:keys [path]} request]
     (cond
+      ;; Top tweets: /@username/top
+      (re-matches #"/@([a-zA-Z0-9_]+)/top" path)
+      (let [[_ screen-name] (re-matches #"/@([a-zA-Z0-9_]+)/top" path)]
+        (render-top-tweets-page screen-name))
+
       ;; Profile page: /@username
       (re-matches #"/@([a-zA-Z0-9_]+)" path)
       (let [[_ screen-name] (re-matches #"/@([a-zA-Z0-9_]+)" path)]

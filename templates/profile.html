@@ -113,6 +113,28 @@
       color: var(--text);
     }
 
+    .profile-nav {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .profile-nav a:hover {
+      color: var(--link);
+    }
+
+    .profile-nav .active {
+      color: var(--text);
+      font-weight: 600;
+    }
+
     .tweet {
       padding: 16px 0;
       border-bottom: 1px solid var(--border);
@@ -240,6 +262,16 @@
         <span><strong>{{user.followers-count}}</strong> Followers</span>
       </div>
     </div>
+
+    <nav class="profile-nav">
+      {% if top %}
+      <a href="/@{{user.screen-name}}">Latest</a>
+      <span class="active">Highlights</span>
+      {% else %}
+      <span class="active">Latest</span>
+      <a href="/@{{user.screen-name}}/top">Highlights</a>
+      {% endif %}
+    </nav>
 
     {% if tweets %}
     {% for tweet in tweets %}
