@@ -119,35 +119,61 @@
                                               :poster (:media_url_https m)})
                                            {:type "image"
                                             :url (:media_url_https m)})))
-                                  (remove #(nil? (:url %)))))]
+                                  (remove #(nil? (:url %)))))
+                      ;; Extract quote tweet
+                      quote-result (get-in tweet-result [:quoted_status_result :result])
+                      quote-legacy (:legacy quote-result)
+                      quote-user (get-in quote-result [:core :user_result :result :legacy])
+                      quote-media-raw (get-in quote-legacy [:extended_entities :media])
+                      quote-media (not-empty
+                                   (->> quote-media-raw
+                                        (map (fn [m]
+                                               (if (= (:type m) "video")
+                                                 {:type "video"
+                                                  :url (proxy-video-url (-> (get-in m [:video_info :variants])
+                                                                            (->> (filter #(= (:content_type %) "video/mp4"))
+                                                                                 (sort-by :bitrate >)
+                                                                                 first :url)))
+                                                  :poster (:media_url_https m)}
+                                                 {:type "image"
+                                                  :url (:media_url_https m)})))
+                                        (remove #(nil? (:url %)))))
+                      quoted-tweet (when quote-legacy
+                                     {:id (:rest_id quote-result)
+                                      :text (:full_text quote-legacy)
+                                      :author {:name (:name quote-user)
+                                               :screen-name (:screen_name quote-user)
+                                               :avatar (:profile_image_url_https quote-user)}
+                                      :media quote-media})]
                   (when legacy
-                    (if is-retweet
-                      {:id (:rest_id tweet-result)
-                       :text (:full_text retweet-legacy)
-                       :created-at (:created_at legacy)
-                       :time (format-relative-date (:created_at legacy))
-                       :author {:name (:name user-legacy)
-                                :screen-name (:screen_name user-legacy)
-                                :avatar (:profile_image_url_https user-legacy)}
-                       :retweeted-from {:name (:name retweet-author)
-                                        :screen-name (:screen_name retweet-author)
-                                        :avatar (:profile_image_url_https retweet-author)}
-                       :reply-count (:reply_count retweet-legacy)
-                       :retweet-count (:retweet_count retweet-legacy)
-                       :favorite-count (:favorite_count retweet-legacy)
-                       :media media
-                       :is-retweet true}
-                      {:id (:rest_id tweet-result)
-                       :text (:full_text legacy)
-                       :created-at (:created_at legacy)
-                       :time (format-relative-date (:created_at legacy))
-                       :author {:name (:name user-legacy)
-                                :screen-name (:screen_name user-legacy)
-                                :avatar (:profile_image_url_https user-legacy)}
-                       :reply-count (:reply_count legacy)
-                       :retweet-count (:retweet_count legacy)
-                       :favorite-count (:favorite_count legacy)
-                       :media media})))))
+                    (cond-> (if is-retweet
+                              {:id (:rest_id tweet-result)
+                               :text (:full_text retweet-legacy)
+                               :created-at (:created_at legacy)
+                               :time (format-relative-date (:created_at legacy))
+                               :author {:name (:name user-legacy)
+                                        :screen-name (:screen_name user-legacy)
+                                        :avatar (:profile_image_url_https user-legacy)}
+                               :retweeted-from {:name (:name retweet-author)
+                                                :screen-name (:screen_name retweet-author)
+                                                :avatar (:profile_image_url_https retweet-author)}
+                               :reply-count (:reply_count retweet-legacy)
+                               :retweet-count (:retweet_count retweet-legacy)
+                               :favorite-count (:favorite_count retweet-legacy)
+                               :media media
+                               :is-retweet true}
+                              {:id (:rest_id tweet-result)
+                               :text (:full_text legacy)
+                               :created-at (:created_at legacy)
+                               :time (format-relative-date (:created_at legacy))
+                               :author {:name (:name user-legacy)
+                                        :screen-name (:screen_name user-legacy)
+                                        :avatar (:profile_image_url_https user-legacy)}
+                               :reply-count (:reply_count legacy)
+                               :retweet-count (:retweet_count legacy)
+                               :favorite-count (:favorite_count legacy)
+                               :media media})
+                      quoted-tweet (assoc :quoted-tweet quoted-tweet))))))
          (remove nil?))))
 
 (defn parse-user
@@ -226,19 +252,48 @@
                                               :poster (:media_url_https m)})
                                            {:type "image"
                                             :url (:media_url_https m)})))
-                                  (remove #(nil? (:url %)))))]
+                                  (remove #(nil? (:url %)))))
+                      ;; Extract quote tweet
+                      quote-result (get-in tweet-result [:quoted_status_result :result])
+                      quote-legacy (:legacy quote-result)
+                      quote-user-result (get-in quote-result [:core :user_results :result])
+                      quote-user-core (:core quote-user-result)
+                      quote-user-avatar (get-in quote-user-result [:avatar :image_url])
+                      quote-media-raw (get-in quote-legacy [:extended_entities :media])
+                      quote-media (not-empty
+                                   (->> quote-media-raw
+                                        (map (fn [m]
+                                               (if (= (:type m) "video")
+                                                 {:type "video"
+                                                  :url (proxy-video-url (-> (get-in m [:video_info :variants])
+                                                                            (->> (filter #(= (:content_type %) "video/mp4"))
+                                                                                 (sort-by :bitrate >)
+                                                                                 first :url)))
+                                                  :poster (:media_url_https m)}
+                                                 {:type "image"
+                                                  :url (:media_url_https m)})))
+                                        (remove #(nil? (:url %)))))
+                      quoted-tweet (when quote-legacy
+                                     {:id (:rest_id quote-result)
+                                      :text (:full_text quote-legacy)
+                                      :author {:name (:name quote-user-core)
+                                               :screen-name (:screen_name quote-user-core)
+                                               :avatar (when quote-user-avatar
+                                                         (str/replace quote-user-avatar "_normal" "_400x400"))}
+                                      :media quote-media})]
                   (when legacy
-                    {:id (:rest_id tweet-result)
-                     :text (:full_text legacy)
-                     :created-at (:created_at legacy)
-                     :time (format-relative-date (:created_at legacy))
-                     :author {:name (:name user-core)
-                              :screen-name (:screen_name user-core)
-                              :avatar (when user-avatar (str/replace user-avatar "_normal" "_400x400"))}
-                     :reply-count (:reply_count legacy)
-                     :retweet-count (:retweet_count legacy)
-                     :favorite-count (:favorite_count legacy)
-                     :media media}))))
+                    (cond-> {:id (:rest_id tweet-result)
+                             :text (:full_text legacy)
+                             :created-at (:created_at legacy)
+                             :time (format-relative-date (:created_at legacy))
+                             :author {:name (:name user-core)
+                                      :screen-name (:screen_name user-core)
+                                      :avatar (when user-avatar (str/replace user-avatar "_normal" "_400x400"))}
+                             :reply-count (:reply_count legacy)
+                             :retweet-count (:retweet_count legacy)
+                             :favorite-count (:favorite_count legacy)
+                             :media media}
+                      quoted-tweet (assoc :quoted-tweet quoted-tweet))))))
          (remove nil?))))
 
 (defn fetch-user-highlights
@@ -306,7 +361,32 @@
                                 :poster (:media_url_https m)})
                              {:type "image"
                               :url (:media_url_https m)})))
-                    (remove #(nil? (:url %)))))]
+                    (remove #(nil? (:url %)))))
+        ;; Extract quote tweet
+        quote-result (get-in tweet-result [:quoted_status_result :result])
+        quote-legacy (:legacy quote-result)
+        quote-user (get-in quote-result [:core :user_result :result :legacy])
+        quote-media-raw (get-in quote-legacy [:extended_entities :media])
+        quote-media (not-empty
+                     (->> quote-media-raw
+                          (map (fn [m]
+                                 (if (= (:type m) "video")
+                                   {:type "video"
+                                    :url (proxy-video-url (-> (get-in m [:video_info :variants])
+                                                              (->> (filter #(= (:content_type %) "video/mp4"))
+                                                                   (sort-by :bitrate >)
+                                                                   first :url)))
+                                    :poster (:media_url_https m)}
+                                   {:type "image"
+                                    :url (:media_url_https m)})))
+                          (remove #(nil? (:url %)))))
+        quoted-tweet (when quote-legacy
+                       {:id (:rest_id quote-result)
+                        :text (:full_text quote-legacy)
+                        :author {:name (:name quote-user)
+                                 :screen-name (:screen_name quote-user)
+                                 :avatar (:profile_image_url_https quote-user)}
+                        :media quote-media})]
     (when legacy
       (cond-> {:id (:rest_id tweet-result)
                :text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
@@ -323,7 +403,8 @@
         is-retweet (assoc :is-retweet true
                           :retweeted-from {:name (:name retweet-author)
                                            :screen-name (:screen_name retweet-author)
-                                           :avatar (:profile_image_url_https retweet-author)})))))
+                                           :avatar (:profile_image_url_https retweet-author)})
+        quoted-tweet (assoc :quoted-tweet quoted-tweet)))))
 
 (defn extract-conversation
   "Extract the focal tweet and replies from a conversation response."

@@ -128,6 +128,14 @@
       color: var(--text-muted);
     }
 
+    a.date {
+      text-decoration: none;
+    }
+
+    a.date:hover {
+      text-decoration: underline;
+    }
+
     .retweet-info {
       color: var(--text-muted);
       font-size: 0.85rem;
@@ -184,6 +192,63 @@
       color: var(--text-muted);
       font-style: italic;
       padding: 20px 0;
+    }
+
+    .quoted-tweet {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg);
+      text-decoration: none;
+      display: block;
+    }
+
+    .quoted-tweet:hover {
+      border-color: var(--text-muted);
+    }
+
+    .quoted-tweet .quoted-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+
+    .quoted-tweet .quoted-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+
+    .quoted-tweet .quoted-author {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .quoted-tweet .quoted-handle {
+      color: var(--text-muted);
+    }
+
+    .quoted-tweet .quoted-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .quoted-media {
+      margin-top: 8px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .quoted-media img,
+    .quoted-media video {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
     }
 
     .tweet-media img {
@@ -284,6 +349,29 @@
         <div class="retweet-info">Retweeted by <a href="/@{{tweet.author.screen-name}}">@{{tweet.author.screen-name}}</a></div>
         {% endif %}
         <div class="tweet-text">{{tweet.text}}</div>
+        {% if tweet.quoted-tweet %}
+        <a href="/tweet/{{tweet.quoted-tweet.id}}" class="quoted-tweet">
+          <div class="quoted-header">
+            <img class="quoted-avatar" src="{{tweet.quoted-tweet.author.avatar}}" alt="">
+            <span class="quoted-author">{{tweet.quoted-tweet.author.name}}</span>
+            <span class="quoted-handle">@{{tweet.quoted-tweet.author.screen-name}}</span>
+          </div>
+          <div class="quoted-text">{{tweet.quoted-tweet.text}}</div>
+          {% if tweet.quoted-tweet.media %}
+          <div class="quoted-media">
+            {% for m in tweet.quoted-tweet.media %}
+            {% if m.type = "video" %}
+            <video controls playsinline poster="{{m.poster}}" onclick="event.preventDefault(); event.stopPropagation();">
+              <source src="{{m.url}}" type="video/mp4">
+            </video>
+            {% else %}
+            <img src="{{m.url}}" alt="" onclick="event.preventDefault(); event.stopPropagation(); openModal('{{m.url}}')">
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        {% endif %}
         {% if tweet.media %}
         <div class="tweet-media" data-images="{% for m in tweet.media %}{% if m.type = "image" %}{{m.url}},{% endif %}{% endfor %}">
           {% for m in tweet.media %}
@@ -314,7 +402,7 @@
         <div class="tweet-header">
           <a href="/@{{reply.author.screen-name}}" class="author">{{reply.author.name}}</a>
           <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
-          <span class="date">&middot; {{reply.time}}</span>
+          <a href="/tweet/{{reply.id}}" class="date">&middot; {{reply.time}}</a>
         </div>
         <div class="tweet-text">{{reply.text}}</div>
         {% if reply.media %}
