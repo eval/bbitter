@@ -83,10 +83,9 @@
       (.flush out)
       :streamed)
     (catch Exception e
-      (println "Video proxy error:" (.getMessage e))
-      {:status  "502 Bad Gateway"
-       :headers {"Content-Type" "text/plain"}
-       :body    "Failed to fetch video"})))
+      (when-not (str/includes? (str (.getMessage e)) "Broken pipe")
+        (println "Video proxy error:" (.getMessage e)))
+      :streamed)))
 
 ;; Lazy-loaded credentials
 (def credentials (delay (oauth/load-credentials)))
@@ -114,9 +113,35 @@
        :headers {"Content-Type" "text/plain"}
        :body    (str "Error: " (.getMessage e))})))
 
+(defn render-profile-page [screen-name]
+  (try
+    (cli/check-env)
+    (println (str "Fetching profile @" screen-name "..."))
+    (let [result (api/fetch-tweets-by-screen-name screen-name @credentials @oauth-session)
+          template (slurp "templates/profile.html")]
+      (if (:user result)
+        {:status  "200 OK"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template
+                                 {:user   (:user result)
+                                  :tweets (:tweets result)})}
+        {:status  "404 Not Found"
+         :headers {"Content-Type" "text/html; charset=utf-8"}
+         :body    (selmer/render template {:user nil})}))
+    (catch Exception e
+      (println "Error fetching profile:" (.getMessage e))
+      {:status  "500 Internal Server Error"
+       :headers {"Content-Type" "text/plain"}
+       :body    (str "Error: " (.getMessage e))})))
+
 (defn handle-request [request public-dir ^OutputStream out]
   (let [{:keys [path]} request]
     (cond
+      ;; Profile page: /@username
+      (re-matches #"/@([a-zA-Z0-9_]+)" path)
+      (let [[_ screen-name] (re-matches #"/@([a-zA-Z0-9_]+)" path)]
+        (render-profile-page screen-name))
+
       ;; Tweet detail page: /tweet/123456...
       (re-matches #"/tweet/(\d+)" path)
       (let [[_ tweet-id] (re-matches #"/tweet/(\d+)" path)]
@@ -159,7 +184,8 @@
                 (send-response out (:status response) (:headers response) (:body response)))))
           (.close socket))
         (catch Exception e
-          (println "Error handling request:" (.getMessage e)))))))
+          (when-not (str/includes? (str (.getMessage e)) "Broken pipe")
+            (println "Error handling request:" (.getMessage e))))))))
 
 (defn -main [& args]
   (let [port       (Integer/parseInt (or (first args) "1889"))

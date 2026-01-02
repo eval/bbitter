@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bbitter</title>
+  <title>{{tweet.author.name}} on bbitter</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -38,12 +38,27 @@
       font-weight: 600;
     }
 
+    h1 a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    h1 a:hover {
+      color: var(--link);
+    }
+
     h1 span { color: var(--text-muted); font-weight: 400; }
 
-    .meta {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      margin-top: 5px;
+    .back-link {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
     }
 
     .tweet {
@@ -53,11 +68,28 @@
       gap: 12px;
     }
 
+    .tweet.focal {
+      background: var(--card-bg);
+      margin: 0 -20px;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .tweet.focal .tweet-text {
+      font-size: 1.1rem;
+    }
+
     .avatar {
       width: 48px;
       height: 48px;
       border-radius: 50%;
       flex-shrink: 0;
+    }
+
+    .tweet.focal .avatar {
+      width: 56px;
+      height: 56px;
     }
 
     .tweet-content {
@@ -94,14 +126,6 @@
 
     .handle, .date {
       color: var(--text-muted);
-    }
-
-    a.date {
-      text-decoration: none;
-    }
-
-    a.date:hover {
-      text-decoration: underline;
     }
 
     .retweet-info {
@@ -148,6 +172,20 @@
       gap: 16px;
     }
 
+    .replies-header {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .no-replies {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 20px 0;
+    }
+
     footer {
       padding: 30px 0;
       color: var(--text-muted);
@@ -158,13 +196,13 @@
 </head>
 <body>
   <header>
-    <h1>bbitter <span>/ curated feed</span></h1>
-    <div class="meta">{{tweet-count}} tweets from {{account-count}} accounts &middot; {{generated-at}}</div>
+    <a href="/" class="back-link">&larr; Back to feed</a>
+    <h1><a href="/">bbitter</a> <span>/ tweet</span></h1>
   </header>
 
   <main>
-    {% for tweet in tweets %}
-    <article class="tweet">
+    {% if tweet %}
+    <article class="tweet focal">
       {% if tweet.is-retweet %}
       <img class="avatar" src="{{tweet.retweeted-from.avatar}}" alt="{{tweet.retweeted-from.name}}">
       {% else %}
@@ -179,10 +217,10 @@
           <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
           <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
           {% endif %}
-          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.created-at}}</a>
+          <span class="date">&middot; {{tweet.created-at}}</span>
         </div>
         {% if tweet.is-retweet %}
-        <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>
+        <div class="retweet-info">Retweeted by <a href="/@{{tweet.author.screen-name}}">@{{tweet.author.screen-name}}</a></div>
         {% endif %}
         <div class="tweet-text">{{tweet.text}}</div>
         {% if tweet.media %}
@@ -199,13 +237,52 @@
         </div>
         {% endif %}
         <div class="stats">
-          <span>💬 {{tweet.reply-count}}</span>
+          <span>💬 {{reply-count}}</span>
           <span>🔁 {{tweet.retweet-count}}</span>
           <span>❤️ {{tweet.favorite-count}}</span>
         </div>
       </div>
     </article>
+
+    {% if replies %}
+    <h2 class="replies-header">Replies</h2>
+    {% for reply in replies %}
+    <article class="tweet">
+      <img class="avatar" src="{{reply.author.avatar}}" alt="{{reply.author.name}}">
+      <div class="tweet-content">
+        <div class="tweet-header">
+          <a href="/@{{reply.author.screen-name}}" class="author">{{reply.author.name}}</a>
+          <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
+          <span class="date">&middot; {{reply.created-at}}</span>
+        </div>
+        <div class="tweet-text">{{reply.text}}</div>
+        {% if reply.media %}
+        <div class="tweet-media">
+          {% for m in reply.media %}
+          {% if m.type = "video" %}
+          <video controls playsinline poster="{{m.poster}}">
+            <source src="{{m.url}}" type="video/mp4">
+          </video>
+          {% else %}
+          <img src="{{m.url}}" alt="Tweet media">
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="stats">
+          <span>🔁 {{reply.retweet-count}}</span>
+          <span>❤️ {{reply.favorite-count}}</span>
+        </div>
+      </div>
+    </article>
     {% endfor %}
+    {% else %}
+    <p class="no-replies">No replies yet</p>
+    {% endif %}
+
+    {% else %}
+    <p class="no-replies">Tweet not found</p>
+    {% endif %}
   </main>
 
   <footer>

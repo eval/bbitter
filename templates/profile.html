@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bbitter</title>
+  <title>@{{user.screen-name}} - bbitter</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -38,12 +38,79 @@
       font-weight: 600;
     }
 
+    h1 a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    h1 a:hover {
+      color: var(--link);
+    }
+
     h1 span { color: var(--text-muted); font-weight: 400; }
 
-    .meta {
+    .back-link {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .profile-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .profile-header {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .profile-info {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .profile-handle {
       color: var(--text-muted);
-      font-size: 0.85rem;
-      margin-top: 5px;
+      margin-bottom: 8px;
+    }
+
+    .profile-bio {
+      margin-top: 12px;
+      white-space: pre-wrap;
+    }
+
+    .profile-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 16px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .profile-stats strong {
+      color: var(--text);
     }
 
     .tweet {
@@ -77,19 +144,6 @@
     .author {
       font-weight: 600;
       color: var(--text);
-      text-decoration: none;
-    }
-
-    .author:hover {
-      text-decoration: underline;
-    }
-
-    a.handle {
-      text-decoration: none;
-    }
-
-    a.handle:hover {
-      text-decoration: underline;
     }
 
     .handle, .date {
@@ -148,6 +202,12 @@
       gap: 16px;
     }
 
+    .no-tweets {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 20px 0;
+    }
+
     footer {
       padding: 30px 0;
       color: var(--text-muted);
@@ -158,11 +218,30 @@
 </head>
 <body>
   <header>
-    <h1>bbitter <span>/ curated feed</span></h1>
-    <div class="meta">{{tweet-count}} tweets from {{account-count}} accounts &middot; {{generated-at}}</div>
+    <a href="/" class="back-link">&larr; Back to feed</a>
+    <h1><a href="/">bbitter</a> <span>/ profile</span></h1>
   </header>
 
   <main>
+    {% if user %}
+    <div class="profile-card">
+      <div class="profile-header">
+        <img class="profile-avatar" src="{{user.avatar}}" alt="{{user.name}}">
+        <div class="profile-info">
+          <div class="profile-name">{{user.name}}</div>
+          <div class="profile-handle">@{{user.screen-name}}</div>
+        </div>
+      </div>
+      {% if user.bio %}
+      <div class="profile-bio">{{user.bio}}</div>
+      {% endif %}
+      <div class="profile-stats">
+        <span><strong>{{user.following-count}}</strong> Following</span>
+        <span><strong>{{user.followers-count}}</strong> Followers</span>
+      </div>
+    </div>
+
+    {% if tweets %}
     {% for tweet in tweets %}
     <article class="tweet">
       {% if tweet.is-retweet %}
@@ -173,11 +252,11 @@
       <div class="tweet-content">
         <div class="tweet-header">
           {% if tweet.is-retweet %}
-          <a href="/@{{tweet.retweeted-from.screen-name}}" class="author">{{tweet.retweeted-from.name}}</a>
-          <a href="/@{{tweet.retweeted-from.screen-name}}" class="handle">@{{tweet.retweeted-from.screen-name}}</a>
+          <span class="author">{{tweet.retweeted-from.name}}</span>
+          <span class="handle">@{{tweet.retweeted-from.screen-name}}</span>
           {% else %}
-          <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
-          <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
+          <span class="author">{{tweet.author.name}}</span>
+          <span class="handle">@{{tweet.author.screen-name}}</span>
           {% endif %}
           <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.created-at}}</a>
         </div>
@@ -206,6 +285,13 @@
       </div>
     </article>
     {% endfor %}
+    {% else %}
+    <p class="no-tweets">No tweets found</p>
+    {% endif %}
+
+    {% else %}
+    <p class="no-tweets">User not found</p>
+    {% endif %}
   </main>
 
   <footer>

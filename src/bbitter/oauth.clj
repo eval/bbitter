@@ -84,6 +84,27 @@
                       (update-vals (update-keys oauth-params #(-> % name (str/replace #"-" "_")))
                                    #(-> % as-str url-encode pr-str))))))
 
+(defn format-duration
+  "Format a duration in seconds as a human-readable string."
+  [seconds]
+  (cond
+    (< seconds 60)  (str seconds "s")
+    (< seconds 3600) (str (quot seconds 60) "m " (mod seconds 60) "s")
+    :else (str (quot seconds 3600) "h " (quot (mod seconds 3600) 60) "m")))
+
+(defn log-rate-limit
+  "Log rate limit info from response headers."
+  [headers]
+  (let [limit     (get headers "x-rate-limit-limit")
+        remaining (get headers "x-rate-limit-remaining")
+        reset     (get headers "x-rate-limit-reset")]
+    (when (and limit remaining)
+      (let [reset-in (when reset
+                       (- (Long/parseLong reset) (quot (System/currentTimeMillis) 1000)))
+            reset-str (when (and reset-in (pos? reset-in))
+                        (str " (resets in " (format-duration reset-in) ")"))]
+        (println (str "[rate-limit] " remaining "/" limit reset-str))))))
+
 (defn make-request
   "Execute an OAuth-signed request."
   [{:keys [method base-url query-params] :as request} credentials oauth-session]
@@ -95,11 +116,13 @@
         signed-request (-> request
                            (add-oauth-params credentials oauth-session)
                            (add-oauth-signature credentials oauth-session))
-        auth-header (build-authorization-header signed-request)]
-    (http/request {:method  method
-                   :uri     base-url
-                   :headers (assoc default-headers "Authorization" auth-header)
-                   :query-params query-params})))
+        auth-header (build-authorization-header signed-request)
+        response (http/request {:method  method
+                                :uri     base-url
+                                :headers (assoc default-headers "Authorization" auth-header)
+                                :query-params query-params})]
+    (log-rate-limit (:headers response))
+    response))
 
 (defn load-credentials []
   {:consumer-key    (System/getenv "TWITTER_CONSUMER_KEY")

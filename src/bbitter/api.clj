@@ -109,14 +109,27 @@
                        :media media})))))
          (remove nil?))))
 
+(defn parse-user
+  "Parse user data into our format."
+  [user-result]
+  (let [legacy (:legacy user-result)]
+    {:id (:rest_id user-result)
+     :name (:name legacy)
+     :screen-name (:screen_name legacy)
+     :bio (:description legacy)
+     :avatar (str/replace (:profile_image_url_https legacy) "_normal" "_400x400")
+     :followers-count (:followers_count legacy)
+     :following-count (:friends_count legacy)}))
+
 (defn fetch-tweets-by-screen-name
   "Convenience function: fetch tweets by screen name."
   [screen-name credentials oauth-session & [opts]]
   (let [user-response (fetch-user-by-screen-name screen-name credentials oauth-session)
         user-id (get-user-id user-response)]
     (if user-id
-      (let [tweets-response (fetch-user-tweets user-id credentials oauth-session opts)]
-        {:user (get-in user-response [:data :user_result :result])
+      (let [tweets-response (fetch-user-tweets user-id credentials oauth-session opts)
+            user-result (get-in user-response [:data :user_result :result])]
+        {:user (parse-user user-result)
          :tweets (extract-tweets tweets-response)
          :raw tweets-response})
       {:error "User not found"
