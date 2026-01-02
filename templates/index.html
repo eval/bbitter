@@ -103,6 +103,22 @@
       text-decoration: underline;
     }
 
+    .tweet-media {
+      margin-top: 12px;
+      display: grid;
+      gap: 4px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .tweet-media img,
+    .tweet-media video {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      background: #000;
+    }
+
     .stats {
       margin-top: 12px;
       color: var(--text-muted);
@@ -148,6 +164,19 @@
         <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>
         {% endif %}
         <div class="tweet-text">{{tweet.text}}</div>
+        {% if tweet.media %}
+        <div class="tweet-media">
+          {% for m in tweet.media %}
+          {% if m.type = "video" %}
+          <video controls playsinline poster="{{m.poster}}">
+            <source src="{{m.url}}" type="video/mp4">
+          </video>
+          {% else %}
+          <img src="{{m.url}}" alt="Tweet media">
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="stats">
           <span>🔁 {{tweet.retweet-count}}</span>
           <span>❤️ {{tweet.favorite-count}}</span>

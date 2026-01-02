@@ -13,7 +13,6 @@
          render    {:doc      "Generate static site"
                     :requires ([bbitter.render :as render])
                     :task     (render/-main)}
-         serve     {:doc      "Serve static site locally"
-                    :requires ([babashka.http-server :as server])
-                    :task     (do (println "Serving at https://bbitter.thinkcreate.test")
-                                  (server/exec {:port 1889 :dir "public"}))}}}
+         serve     {:doc      "Serve static site with video proxy"
+                    :requires ([bbitter.server :as server])
+                    :task     (server/-main "1889" "public")}}}

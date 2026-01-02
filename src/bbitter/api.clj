@@ -1,7 +1,14 @@
 (ns bbitter.api
   (:require [bbitter.oauth :as oauth]
             [cheshire.core :as json]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [java.net URLEncoder]))
+
+(defn proxy-video-url
+  "Convert a Twitter video URL to a proxy URL."
+  [url]
+  (when url
+    (str "/proxy/video?url=" (URLEncoder/encode url "UTF-8"))))
 
 (defn user-by-screen-name-request [screen-name]
   {:method       :get
@@ -54,7 +61,26 @@
                       retweet-result (get-in legacy [:retweeted_status_result :result])
                       retweet-legacy (get-in retweet-result [:legacy])
                       retweet-author (get-in retweet-result [:core :user_result :result :legacy])
-                      is-retweet (some? retweet-legacy)]
+                      is-retweet (some? retweet-legacy)
+                      ;; Extract media (images and videos)
+                      source-legacy (if is-retweet retweet-legacy legacy)
+                      raw-media (get-in source-legacy [:extended_entities :media])
+                      media (not-empty
+                             (->> raw-media
+                                  (map (fn [m]
+                                         (if (= (:type m) "video")
+                                           ;; Get highest quality MP4
+                                           (let [variants (get-in m [:video_info :variants])
+                                                 mp4s (->> variants
+                                                           (filter #(= (:content_type %) "video/mp4"))
+                                                           (sort-by :bitrate >))
+                                                 video-url (:url (first mp4s))]
+                                             {:type "video"
+                                              :url (proxy-video-url video-url)
+                                              :poster (:media_url_https m)})
+                                           {:type "image"
+                                            :url (:media_url_https m)})))
+                                  (remove #(nil? (:url %)))))]
                   (when legacy
                     (if is-retweet
                       {:id (:rest_id tweet-result)
@@ -68,6 +94,7 @@
                                         :avatar (:profile_image_url_https retweet-author)}
                        :retweet-count (:retweet_count retweet-legacy)
                        :favorite-count (:favorite_count retweet-legacy)
+                       :media media
                        :is-retweet true}
                       {:id (:rest_id tweet-result)
                        :text (:full_text legacy)
@@ -76,7 +103,8 @@
                                 :screen-name (:screen_name user-legacy)
                                 :avatar (:profile_image_url_https user-legacy)}
                        :retweet-count (:retweet_count legacy)
-                       :favorite-count (:favorite_count legacy)})))))
+                       :favorite-count (:favorite_count legacy)
+                       :media media})))))
          (remove nil?))))
 
 (defn fetch-tweets-by-screen-name
