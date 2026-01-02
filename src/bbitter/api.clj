@@ -1,5 +1,5 @@
-(ns twitter.api
-  (:require [twitter.oauth :as oauth]
+(ns bbitter.api
+  (:require [bbitter.oauth :as oauth]
             [cheshire.core :as json]
             [clojure.string :as str]))
 

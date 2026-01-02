@@ -1,5 +1,5 @@
 {:paths ["src"]
  :deps {cheshire/cheshire {:mvn/version "5.13.0"}}
- :tasks {tweets {:doc "Fetch tweets from a user"
-                 :requires ([twitter.cli :as cli])
-                 :task (apply cli/-main *command-line-args*)}}}
+ :tasks {itter {:doc "Fetch tweets from a user"
+                :requires ([bbitter.cli :as cli])
+                :task (apply cli/-main *command-line-args*)}}}

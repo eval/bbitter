@@ -1,4 +1,4 @@
-(ns twitter.oauth
+(ns bbitter.oauth
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
             [clojure.string :as str])
