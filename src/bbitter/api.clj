@@ -61,9 +61,11 @@
                        :text (:full_text retweet-legacy)
                        :created-at (:created_at legacy)
                        :author {:name (:name user-legacy)
-                                :screen-name (:screen_name user-legacy)}
+                                :screen-name (:screen_name user-legacy)
+                                :avatar (:profile_image_url_https user-legacy)}
                        :retweeted-from {:name (:name retweet-author)
-                                        :screen-name (:screen_name retweet-author)}
+                                        :screen-name (:screen_name retweet-author)
+                                        :avatar (:profile_image_url_https retweet-author)}
                        :retweet-count (:retweet_count retweet-legacy)
                        :favorite-count (:favorite_count retweet-legacy)
                        :is-retweet true}
@@ -71,7 +73,8 @@
                        :text (:full_text legacy)
                        :created-at (:created_at legacy)
                        :author {:name (:name user-legacy)
-                                :screen-name (:screen_name user-legacy)}
+                                :screen-name (:screen_name user-legacy)
+                                :avatar (:profile_image_url_https user-legacy)}
                        :retweet-count (:retweet_count legacy)
                        :favorite-count (:favorite_count legacy)})))))
          (remove nil?))))

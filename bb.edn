@@ -1,6 +1,7 @@
 {:paths ["src"]
  :deps  {cheshire/cheshire            {:mvn/version "5.13.0"}
-         io.github.borkdude/quickblog {:git/sha "425fac90c1f0fb02b8124233ab324657907b64be"}}
+         io.github.borkdude/quickblog {:git/sha "425fac90c1f0fb02b8124233ab324657907b64be"}
+         org.babashka/http-server     {:mvn/version "0.1.13"}}
  :tasks {:requires ([quickblog.cli :as cli])
          :init     (def opts {:blog-title       "REPL adventures"
                               :blog-description "A blog about blogging quickly"})
@@ -8,4 +9,11 @@
                     :task (cli/dispatch opts)}
          itter     {:doc      "Fetch tweets from a user"
                     :requires ([bbitter.cli :as cli])
-                    :task     (apply cli/-main *command-line-args*)}}}
+                    :task     (apply cli/-main *command-line-args*)}
+         render    {:doc      "Generate static site"
+                    :requires ([bbitter.render :as render])
+                    :task     (render/-main)}
+         serve     {:doc      "Serve static site locally"
+                    :requires ([babashka.http-server :as server])
+                    :task     (do (println "Serving at https://bbitter.thinkcreate.test")
+                                  (server/exec {:port 1889 :dir "public"}))}}}
