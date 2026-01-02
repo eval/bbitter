@@ -1,0 +1,7 @@
+[env]
+_.path = ["bin"]
+_.file = ".secrets.toml"
+PROJECT_ROOT = "{{config_root}}"
+
+[tools]
+clj-kondo = "latest"
