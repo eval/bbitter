@@ -1,5 +1,11 @@
 {:paths ["src"]
- :deps {cheshire/cheshire {:mvn/version "5.13.0"}}
- :tasks {itter {:doc "Fetch tweets from a user"
-                :requires ([bbitter.cli :as cli])
-                :task (apply cli/-main *command-line-args*)}}}
+ :deps  {cheshire/cheshire            {:mvn/version "5.13.0"}
+         io.github.borkdude/quickblog {:git/sha "425fac90c1f0fb02b8124233ab324657907b64be"}}
+ :tasks {:requires ([quickblog.cli :as cli])
+         :init     (def opts {:blog-title       "REPL adventures"
+                              :blog-description "A blog about blogging quickly"})
+         quickblog {:doc  "Start blogging quickly! Run `bb quickblog help` for details."
+                    :task (cli/dispatch opts)}
+         itter     {:doc      "Fetch tweets from a user"
+                    :requires ([bbitter.cli :as cli])
+                    :task     (apply cli/-main *command-line-args*)}}}
