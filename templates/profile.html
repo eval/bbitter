@@ -138,6 +138,9 @@
     .tweet {
       padding: 16px 0;
       border-bottom: 1px solid var(--border);
+    }
+
+    .tweet-body {
       display: flex;
       gap: 12px;
     }
@@ -184,6 +187,7 @@
       color: var(--text-muted);
       font-size: 0.85rem;
       margin-bottom: 8px;
+      padding-left: 60px;
     }
 
     .tweet-text {
@@ -395,25 +399,26 @@
     {% for tweet in tweets %}
     <article class="tweet">
       {% if tweet.is-retweet %}
-      <img class="avatar" src="{{tweet.retweeted-from.avatar}}" alt="{{tweet.retweeted-from.name}}">
-      {% else %}
-      <img class="avatar" src="{{tweet.author.avatar}}" alt="{{tweet.author.name}}">
+      <div class="retweet-info">🔁 Retweeted by @{{tweet.author.screen-name}}</div>
       {% endif %}
-      <div class="tweet-content">
-        <div class="tweet-header">
-          {% if tweet.is-retweet %}
-          <span class="author">{{tweet.retweeted-from.name}}</span>
-          <span class="handle">@{{tweet.retweeted-from.screen-name}}</span>
-          {% else %}
-          <span class="author">{{tweet.author.name}}</span>
-          <span class="handle">@{{tweet.author.screen-name}}</span>
-          {% endif %}
-          <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.time}}</a>
-        </div>
+      <div class="tweet-body">
         {% if tweet.is-retweet %}
-        <div class="retweet-info">Retweeted by @{{tweet.author.screen-name}}</div>
+        <img class="avatar" src="{{tweet.retweeted-from.avatar}}" alt="{{tweet.retweeted-from.name}}">
+        {% else %}
+        <img class="avatar" src="{{tweet.author.avatar}}" alt="{{tweet.author.name}}">
         {% endif %}
-        <div class="tweet-text">{{tweet.text}}</div>
+        <div class="tweet-content">
+          <div class="tweet-header">
+            {% if tweet.is-retweet %}
+            <span class="author">{{tweet.retweeted-from.name}}</span>
+            <span class="handle">@{{tweet.retweeted-from.screen-name}}</span>
+            {% else %}
+            <span class="author">{{tweet.author.name}}</span>
+            <span class="handle">@{{tweet.author.screen-name}}</span>
+            {% endif %}
+            <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.time}}</a>
+          </div>
+          <div class="tweet-text">{{tweet.text}}</div>
         {% if tweet.quoted-tweet %}
         <a href="/tweet/{{tweet.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -450,10 +455,11 @@
           {% endfor %}
         </div>
         {% endif %}
-        <div class="stats">
-          <span>💬 {{tweet.reply-count}}</span>
-          <span>🔁 {{tweet.retweet-count}}</span>
-          <span>❤️ {{tweet.favorite-count}}</span>
+          <div class="stats">
+            <span>💬 {{tweet.reply-count}}</span>
+            <span>🔁 {{tweet.retweet-count}}</span>
+            <span>❤️ {{tweet.favorite-count}}</span>
+          </div>
         </div>
       </div>
     </article>

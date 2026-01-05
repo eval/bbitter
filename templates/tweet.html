@@ -64,6 +64,9 @@
     .tweet {
       padding: 16px 0;
       border-bottom: 1px solid var(--border);
+    }
+
+    .tweet-body {
       display: flex;
       gap: 12px;
     }
@@ -140,6 +143,11 @@
       color: var(--text-muted);
       font-size: 0.85rem;
       margin-bottom: 8px;
+      padding-left: 60px;
+    }
+
+    .tweet.focal .retweet-info {
+      padding-left: 68px;
     }
 
     .tweet-text {
@@ -330,25 +338,26 @@
     {% if tweet %}
     <article class="tweet focal">
       {% if tweet.is-retweet %}
-      <img class="avatar" src="{{tweet.retweeted-from.avatar}}" alt="{{tweet.retweeted-from.name}}">
-      {% else %}
-      <img class="avatar" src="{{tweet.author.avatar}}" alt="{{tweet.author.name}}">
+      <div class="retweet-info">🔁 Retweeted by <a href="/@{{tweet.author.screen-name}}">@{{tweet.author.screen-name}}</a></div>
       {% endif %}
-      <div class="tweet-content">
-        <div class="tweet-header">
-          {% if tweet.is-retweet %}
-          <a href="/@{{tweet.retweeted-from.screen-name}}" class="author">{{tweet.retweeted-from.name}}</a>
-          <a href="/@{{tweet.retweeted-from.screen-name}}" class="handle">@{{tweet.retweeted-from.screen-name}}</a>
-          {% else %}
-          <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
-          <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
-          {% endif %}
-          <span class="date">&middot; {{tweet.time}}</span>
-        </div>
+      <div class="tweet-body">
         {% if tweet.is-retweet %}
-        <div class="retweet-info">Retweeted by <a href="/@{{tweet.author.screen-name}}">@{{tweet.author.screen-name}}</a></div>
+        <img class="avatar" src="{{tweet.retweeted-from.avatar}}" alt="{{tweet.retweeted-from.name}}">
+        {% else %}
+        <img class="avatar" src="{{tweet.author.avatar}}" alt="{{tweet.author.name}}">
         {% endif %}
-        <div class="tweet-text">{{tweet.text}}</div>
+        <div class="tweet-content">
+          <div class="tweet-header">
+            {% if tweet.is-retweet %}
+            <a href="/@{{tweet.retweeted-from.screen-name}}" class="author">{{tweet.retweeted-from.name}}</a>
+            <a href="/@{{tweet.retweeted-from.screen-name}}" class="handle">@{{tweet.retweeted-from.screen-name}}</a>
+            {% else %}
+            <a href="/@{{tweet.author.screen-name}}" class="author">{{tweet.author.name}}</a>
+            <a href="/@{{tweet.author.screen-name}}" class="handle">@{{tweet.author.screen-name}}</a>
+            {% endif %}
+            <span class="date">&middot; {{tweet.time}}</span>
+          </div>
+          <div class="tweet-text">{{tweet.text}}</div>
         {% if tweet.quoted-tweet %}
         <a href="/tweet/{{tweet.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -385,10 +394,11 @@
           {% endfor %}
         </div>
         {% endif %}
-        <div class="stats">
-          <span>💬 {{reply-count}}</span>
-          <span>🔁 {{tweet.retweet-count}}</span>
-          <span>❤️ {{tweet.favorite-count}}</span>
+          <div class="stats">
+            <span>💬 {{reply-count}}</span>
+            <span>🔁 {{tweet.retweet-count}}</span>
+            <span>❤️ {{tweet.favorite-count}}</span>
+          </div>
         </div>
       </div>
     </article>
@@ -397,14 +407,15 @@
     <h2 class="replies-header">Replies</h2>
     {% for reply in replies %}
     <article class="tweet">
-      <img class="avatar" src="{{reply.author.avatar}}" alt="{{reply.author.name}}">
-      <div class="tweet-content">
-        <div class="tweet-header">
-          <a href="/@{{reply.author.screen-name}}" class="author">{{reply.author.name}}</a>
-          <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
-          <a href="/tweet/{{reply.id}}" class="date">&middot; {{reply.time}}</a>
-        </div>
-        <div class="tweet-text">{{reply.text}}</div>
+      <div class="tweet-body">
+        <img class="avatar" src="{{reply.author.avatar}}" alt="{{reply.author.name}}">
+        <div class="tweet-content">
+          <div class="tweet-header">
+            <a href="/@{{reply.author.screen-name}}" class="author">{{reply.author.name}}</a>
+            <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
+            <a href="/tweet/{{reply.id}}" class="date">&middot; {{reply.time}}</a>
+          </div>
+          <div class="tweet-text">{{reply.text}}</div>
         {% if reply.quoted-tweet %}
         <a href="/tweet/{{reply.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -441,9 +452,10 @@
           {% endfor %}
         </div>
         {% endif %}
-        <div class="stats">
-          <span>🔁 {{reply.retweet-count}}</span>
-          <span>❤️ {{reply.favorite-count}}</span>
+          <div class="stats">
+            <span>🔁 {{reply.retweet-count}}</span>
+            <span>❤️ {{reply.favorite-count}}</span>
+          </div>
         </div>
       </div>
     </article>

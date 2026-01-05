@@ -10,6 +10,33 @@
 
 ;; Text processing
 
+(defn decode-html-entities
+  "Decode common HTML entities in text."
+  [text]
+  (when text
+    (-> text
+        (str/replace "&amp;" "&")
+        (str/replace "&lt;" "<")
+        (str/replace "&gt;" ">")
+        (str/replace "&quot;" "\"")
+        (str/replace "&#39;" "'")
+        (str/replace "&apos;" "'"))))
+
+(defn format-count
+  "Format large numbers: 2200 -> '2.2k', 1500000 -> '1.5m'."
+  [n]
+  (when n
+    (cond
+      (>= n 1000000) (let [m (/ n 1000000.0)]
+                       (if (== (Math/floor m) m)
+                         (str (int m) "m")
+                         (str (format "%.1f" m) "m")))
+      (>= n 1000)    (let [k (/ n 1000.0)]
+                       (if (== (Math/floor k) k)
+                         (str (int k) "k")
+                         (str (format "%.1f" k) "k")))
+      :else          (str n))))
+
 (defn strip-leading-mentions
   "Remove leading @mentions from reply text."
   [text]
@@ -19,8 +46,9 @@
 (defn get-full-text
   "Get full tweet text, preferring note_tweet for long tweets."
   [tweet-result legacy]
-  (or (get-in tweet-result [:note_tweet :note_tweet_results :result :text])
-      (:full_text legacy)))
+  (decode-html-entities
+   (or (get-in tweet-result [:note_tweet :note_tweet_results :result :text])
+       (:full_text legacy))))
 
 ;; Date formatting
 
@@ -171,9 +199,9 @@
                                :retweeted-from {:name (:name retweet-author)
                                                 :screen-name (:screen_name retweet-author)
                                                 :avatar (:profile_image_url_https retweet-author)}
-                               :reply-count (:reply_count retweet-legacy)
-                               :retweet-count (:retweet_count retweet-legacy)
-                               :favorite-count (:favorite_count retweet-legacy)
+                               :reply-count (format-count (:reply_count retweet-legacy))
+                               :retweet-count (format-count (:retweet_count retweet-legacy))
+                               :favorite-count (format-count (:favorite_count retweet-legacy))
                                :media media
                                :is-retweet true}
                               {:id (:rest_id tweet-result)
@@ -183,9 +211,9 @@
                                :author {:name (:name user-legacy)
                                         :screen-name (:screen_name user-legacy)
                                         :avatar (:profile_image_url_https user-legacy)}
-                               :reply-count (:reply_count legacy)
-                               :retweet-count (:retweet_count legacy)
-                               :favorite-count (:favorite_count legacy)
+                               :reply-count (format-count (:reply_count legacy))
+                               :retweet-count (format-count (:retweet_count legacy))
+                               :favorite-count (format-count (:favorite_count legacy))
                                :media media})
                       quoted-tweet (assoc :quoted-tweet quoted-tweet))))))
          (remove nil?))))
@@ -303,9 +331,9 @@
                              :author {:name (:name user-core)
                                       :screen-name (:screen_name user-core)
                                       :avatar (when user-avatar (str/replace user-avatar "_normal" "_400x400"))}
-                             :reply-count (:reply_count legacy)
-                             :retweet-count (:retweet_count legacy)
-                             :favorite-count (:favorite_count legacy)
+                             :reply-count (format-count (:reply_count legacy))
+                             :retweet-count (format-count (:retweet_count legacy))
+                             :favorite-count (format-count (:favorite_count legacy))
                              :media media}
                       quoted-tweet (assoc :quoted-tweet quoted-tweet))))))
          (remove nil?))))
@@ -416,8 +444,8 @@
                :author {:name (:name user-legacy)
                         :screen-name (:screen_name user-legacy)
                         :avatar (:profile_image_url_https user-legacy)}
-               :retweet-count (if is-retweet (:retweet_count retweet-legacy) (:retweet_count legacy))
-               :favorite-count (if is-retweet (:favorite_count retweet-legacy) (:favorite_count legacy))
+               :retweet-count (format-count (if is-retweet (:retweet_count retweet-legacy) (:retweet_count legacy)))
+               :favorite-count (format-count (if is-retweet (:favorite_count retweet-legacy) (:favorite_count legacy)))
                :media media}
         is-retweet (assoc :is-retweet true
                           :retweeted-from {:name (:name retweet-author)
