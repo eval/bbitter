@@ -357,7 +357,7 @@
             {% endif %}
             <span class="date">&middot; {{tweet.time}}</span>
           </div>
-          <div class="tweet-text">{{tweet.text}}</div>
+          <div class="tweet-text">{{tweet.text|safe}}</div>
         {% if tweet.quoted-tweet %}
         <a href="/tweet/{{tweet.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -365,7 +365,7 @@
             <span class="quoted-author">{{tweet.quoted-tweet.author.name}}</span>
             <span class="quoted-handle">@{{tweet.quoted-tweet.author.screen-name}}</span>
           </div>
-          <div class="quoted-text">{{tweet.quoted-tweet.text}}</div>
+          <div class="quoted-text">{{tweet.quoted-tweet.text|safe}}</div>
           {% if tweet.quoted-tweet.media %}
           <div class="quoted-media">
             {% for m in tweet.quoted-tweet.media %}
@@ -415,7 +415,7 @@
             <a href="/@{{reply.author.screen-name}}" class="handle">@{{reply.author.screen-name}}</a>
             <a href="/tweet/{{reply.id}}" class="date">&middot; {{reply.time}}</a>
           </div>
-          <div class="tweet-text">{{reply.text}}</div>
+          <div class="tweet-text">{{reply.text|safe}}</div>
         {% if reply.quoted-tweet %}
         <a href="/tweet/{{reply.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -423,7 +423,7 @@
             <span class="quoted-author">{{reply.quoted-tweet.author.name}}</span>
             <span class="quoted-handle">@{{reply.quoted-tweet.author.screen-name}}</span>
           </div>
-          <div class="quoted-text">{{reply.quoted-tweet.text}}</div>
+          <div class="quoted-text">{{reply.quoted-tweet.text|safe}}</div>
           {% if reply.quoted-tweet.media %}
           <div class="quoted-media">
             {% for m in reply.quoted-tweet.media %}

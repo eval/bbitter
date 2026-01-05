@@ -43,12 +43,77 @@
   (when text
     (str/trim (str/replace text #"^(@\w+\s*)+" ""))))
 
+(defn media-url?
+  "Check if expanded URL points to a tweet's photo or video."
+  [expanded-url]
+  (when expanded-url
+    (re-find #"/(?:photo|video)/\d+$" expanded-url)))
+
+(defn truncate-url
+  "Truncate a URL for display, max 35 chars."
+  [url]
+  (when url
+    (let [clean (-> url
+                    (str/replace #"^https?://" "")
+                    (str/replace #"^www\." ""))]
+      (if (> (count clean) 35)
+        (str (subs clean 0 32) "...")
+        clean))))
+
+(defn process-tweet-urls
+  "Process URLs in tweet text:
+   - Remove media URLs (photo/video)
+   - Replace other t.co URLs with clickable links"
+  [text url-entities media-entities]
+  (if-not text
+    text
+    (let [;; Get media URLs to remove
+          media-urls (->> media-entities
+                          (map :url)
+                          (remove nil?)
+                          set)
+          ;; Get URL mappings for replacement (t.co -> clickable link)
+          url-map (->> url-entities
+                       (map (fn [u]
+                              (let [display (or (:display_url u)
+                                                (truncate-url (:expanded_url u)))
+                                    href (:expanded_url u)]
+                                [(:url u)
+                                 (str "<a href=\"" href "\" target=\"_blank\" rel=\"noopener\">" display "</a>")])))
+                       (into {}))
+          ;; Remove media URLs
+          text-no-media (reduce (fn [t url]
+                                  (str/replace t (str " " url) ""))
+                                text
+                                media-urls)
+          ;; Also try without leading space
+          text-no-media (reduce (fn [t url]
+                                  (str/replace t url ""))
+                                text-no-media
+                                media-urls)
+          ;; Replace remaining t.co URLs with clickable links
+          text-with-urls (reduce (fn [t [tco-url link-html]]
+                                   (str/replace t tco-url link-html))
+                                 text-no-media
+                                 url-map)]
+      (str/trim text-with-urls))))
+
 (defn get-full-text
-  "Get full tweet text, preferring note_tweet for long tweets."
+  "Get full tweet text, preferring note_tweet for long tweets.
+   Processes URLs to remove media links and expand others."
   [tweet-result legacy]
-  (decode-html-entities
-   (or (get-in tweet-result [:note_tweet :note_tweet_results :result :text])
-       (:full_text legacy))))
+  (let [note-tweet (get-in tweet-result [:note_tweet :note_tweet_results :result])
+        use-note-tweet? (some? (:text note-tweet))
+        text (if use-note-tweet? (:text note-tweet) (:full_text legacy))
+        ;; Use note_tweet entities if available, otherwise legacy entities
+        url-entities (if use-note-tweet?
+                       (get-in note-tweet [:entity_set :urls])
+                       (get-in legacy [:entities :urls]))
+        ;; Media entities are always from legacy (note_tweet doesn't have them)
+        media-entities (get-in legacy [:extended_entities :media])]
+    (-> text
+        (process-tweet-urls url-entities media-entities)
+        decode-html-entities)))
 
 ;; Date formatting
 

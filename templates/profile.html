@@ -418,7 +418,7 @@
             {% endif %}
             <a href="/tweet/{{tweet.id}}" class="date">&middot; {{tweet.time}}</a>
           </div>
-          <div class="tweet-text">{{tweet.text}}</div>
+          <div class="tweet-text">{{tweet.text|safe}}</div>
         {% if tweet.quoted-tweet %}
         <a href="/tweet/{{tweet.quoted-tweet.id}}" class="quoted-tweet">
           <div class="quoted-header">
@@ -426,7 +426,7 @@
             <span class="quoted-author">{{tweet.quoted-tweet.author.name}}</span>
             <span class="quoted-handle">@{{tweet.quoted-tweet.author.screen-name}}</span>
           </div>
-          <div class="quoted-text">{{tweet.quoted-tweet.text}}</div>
+          <div class="quoted-text">{{tweet.quoted-tweet.text|safe}}</div>
           {% if tweet.quoted-tweet.media %}
           <div class="quoted-media">
             {% for m in tweet.quoted-tweet.media %}
