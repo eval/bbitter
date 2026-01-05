@@ -16,6 +16,12 @@
   (when text
     (str/trim (str/replace text #"^(@\w+\s*)+" ""))))
 
+(defn get-full-text
+  "Get full tweet text, preferring note_tweet for long tweets."
+  [tweet-result legacy]
+  (or (get-in tweet-result [:note_tweet :note_tweet_results :result :text])
+      (:full_text legacy)))
+
 ;; Date formatting
 
 (def twitter-date-formatter
@@ -148,7 +154,7 @@
                                         (remove #(nil? (:url %)))))
                       quoted-tweet (when quote-legacy
                                      {:id (:rest_id quote-result)
-                                      :text (:full_text quote-legacy)
+                                      :text (get-full-text quote-result quote-legacy)
                                       :author {:name (:name quote-user)
                                                :screen-name (:screen_name quote-user)
                                                :avatar (:profile_image_url_https quote-user)}
@@ -156,7 +162,7 @@
                   (when legacy
                     (cond-> (if is-retweet
                               {:id (:rest_id tweet-result)
-                               :text (:full_text retweet-legacy)
+                               :text (get-full-text retweet-result retweet-legacy)
                                :created-at (:created_at legacy)
                                :time (format-relative-date (:created_at legacy))
                                :author {:name (:name user-legacy)
@@ -171,7 +177,7 @@
                                :media media
                                :is-retweet true}
                               {:id (:rest_id tweet-result)
-                               :text (:full_text legacy)
+                               :text (get-full-text tweet-result legacy)
                                :created-at (:created_at legacy)
                                :time (format-relative-date (:created_at legacy))
                                :author {:name (:name user-legacy)
@@ -283,7 +289,7 @@
                                         (remove #(nil? (:url %)))))
                       quoted-tweet (when quote-legacy
                                      {:id (:rest_id quote-result)
-                                      :text (:full_text quote-legacy)
+                                      :text (get-full-text quote-result quote-legacy)
                                       :author {:name (:name quote-user-core)
                                                :screen-name (:screen_name quote-user-core)
                                                :avatar (when quote-user-avatar
@@ -291,7 +297,7 @@
                                       :media quote-media})]
                   (when legacy
                     (cond-> {:id (:rest_id tweet-result)
-                             :text (:full_text legacy)
+                             :text (get-full-text tweet-result legacy)
                              :created-at (:created_at legacy)
                              :time (format-relative-date (:created_at legacy))
                              :author {:name (:name user-core)
@@ -390,13 +396,15 @@
                           (remove #(nil? (:url %)))))
         quoted-tweet (when quote-legacy
                        {:id (:rest_id quote-result)
-                        :text (:full_text quote-legacy)
+                        :text (get-full-text quote-result quote-legacy)
                         :author {:name (:name quote-user)
                                  :screen-name (:screen_name quote-user)
                                  :avatar (:profile_image_url_https quote-user)}
                         :media quote-media})
         in-reply-to (:in_reply_to_status_id_str legacy)
-        raw-text (if is-retweet (:full_text retweet-legacy) (:full_text legacy))
+        raw-text (if is-retweet
+                   (get-full-text retweet-result retweet-legacy)
+                   (get-full-text tweet-result legacy))
         text (if in-reply-to (strip-leading-mentions raw-text) raw-text)]
     (when legacy
       (cond-> {:id (:rest_id tweet-result)
