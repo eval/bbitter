@@ -79,7 +79,7 @@
                                                 (truncate-url (:expanded_url u)))
                                     href (:expanded_url u)]
                                 [(:url u)
-                                 (str "<a href=\"" href "\" target=\"_blank\" rel=\"noopener\">" display "</a>")])))
+                                 (str "<a href=\"" href "\" title=\"" href "\" target=\"_blank\" rel=\"noopener\">" display "</a>")])))
                        (into {}))
           ;; Remove media URLs
           text-no-media (reduce (fn [t url]
