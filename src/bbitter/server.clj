@@ -103,7 +103,7 @@
          :body    (selmer/render template
                                  {:tweet       (:tweet result)
                                   :replies     (:replies result)
-                                  :reply-count (count (:replies result))})}
+                                  :reply-count (:reply-count (:tweet result))})}
         {:status  "404 Not Found"
          :headers {"Content-Type" "text/html; charset=utf-8"}
          :body    (selmer/render template {:tweet nil})}))

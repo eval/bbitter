@@ -509,10 +509,12 @@
                :author {:name (:name user-legacy)
                         :screen-name (:screen_name user-legacy)
                         :avatar (:profile_image_url_https user-legacy)}
+               :reply-count (format-count (if is-retweet (:reply_count retweet-legacy) (:reply_count legacy)))
                :retweet-count (format-count (if is-retweet (:retweet_count retweet-legacy) (:retweet_count legacy)))
                :favorite-count (format-count (if is-retweet (:favorite_count retweet-legacy) (:favorite_count legacy)))
                :media media}
         is-retweet (assoc :is-retweet true
+                          :retweeted-id (:rest_id retweet-result)
                           :retweeted-from {:name (:name retweet-author)
                                            :screen-name (:screen_name retweet-author)
                                            :avatar (:profile_image_url_https retweet-author)})
@@ -556,12 +558,16 @@
                                 :else nil)))
                           entries)
         focal-tweet (first (filter #(= (:id %) focal-tweet-id) all-items))
-        ;; Filter replies: must be in the same conversation as the focal tweet
+        ;; For retweets, replies are to the original tweet, not the retweet
+        reply-target-id (if (:is-retweet focal-tweet)
+                          (:retweeted-id focal-tweet)
+                          focal-tweet-id)
+        ;; Filter replies: direct replies to the focal tweet (or retweeted tweet)
         replies (->> all-items
                      (filter #(= (:entry-type %) :reply))
                      (remove #(= (:id %) focal-tweet-id))
-                     ;; Only keep replies that are part of this conversation
-                     (filter #(= (:conversation-id %) focal-tweet-id)))]
+                     ;; Only keep direct replies to the target tweet
+                     (filter #(= (:in-reply-to %) reply-target-id)))]
     {:tweet focal-tweet
      :replies replies}))
 
@@ -571,6 +577,19 @@
   (let [response (oauth/make-request (tweet-conversation-request tweet-id)
                                      credentials
                                      oauth-session)
-        parsed (-> response :body (json/parse-string true))]
-    (assoc (extract-conversation parsed tweet-id)
-           :raw parsed)))
+        parsed (-> response :body (json/parse-string true))
+        result (extract-conversation parsed tweet-id)
+        focal-tweet (:tweet result)]
+    ;; If the focal tweet is a retweet, fetch the original tweet's conversation for replies
+    (if (:is-retweet focal-tweet)
+      (let [original-id (:retweeted-id focal-tweet)
+            orig-response (oauth/make-request (tweet-conversation-request original-id)
+                                              credentials
+                                              oauth-session)
+            orig-parsed (-> orig-response :body (json/parse-string true))
+            orig-result (extract-conversation orig-parsed original-id)]
+        ;; Return the retweet as focal, but with the original's replies
+        {:tweet focal-tweet
+         :replies (:replies orig-result)
+         :raw parsed})
+      (assoc result :raw parsed))))
