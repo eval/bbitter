@@ -56,3 +56,4 @@ BBITTER_ACCOUNTS="paulg foo bar"
 Set it in `.secrets.toml` locally and as a GitHub Actions secret for CI.
 If the variable is unset, `bb fetch` falls back to a local `accounts.edn`
 file (`{:accounts ["paulg" ...]}`), which is gitignored.
+
