@@ -3,8 +3,7 @@
             [bbitter.oauth :as oauth]
             [cheshire.core :as json]
             [clojure.string :as str])
-  (:import [java.net URLEncoder]
-           [java.time ZonedDateTime Instant Duration]
+  (:import [java.time ZonedDateTime Duration]
            [java.time.format DateTimeFormatter]
            [java.util Locale]))
 
@@ -151,10 +150,11 @@
 ;; Video proxy
 
 (defn proxy-video-url
-  "Convert a Twitter video URL to a proxy URL."
+  "Return the video URL unchanged. The browser loads it directly from X.
+   The page sends no Referer header (see the meta tag in the templates),
+   so X accepts the request and no proxy is needed."
   [url]
-  (when url
-    (str "/proxy/video?url=" (URLEncoder/encode url "UTF-8"))))
+  url)
 
 (defn user-by-screen-name-request [screen-name]
   {:method       :get

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>bbitter</title>
   <style>
     :root {
@@ -328,7 +329,7 @@
           <div class="quoted-media">
             {% for m in tweet.quoted-tweet.media %}
             {% if m.type = "video" %}
-            <video controls playsinline poster="{{m.poster}}" onclick="event.stopPropagation();">
+            <video controls playsinline preload="none" poster="{{m.poster}}" onclick="event.stopPropagation();">
               <source src="{{m.url}}" type="video/mp4">
             </video>
             {% else %}
@@ -343,7 +344,7 @@
         <div class="tweet-media" data-images="{% for m in tweet.media %}{% if m.type = "image" %}{{m.url}},{% endif %}{% endfor %}">
           {% for m in tweet.media %}
           {% if m.type = "video" %}
-          <video controls playsinline poster="{{m.poster}}">
+          <video controls playsinline preload="none" poster="{{m.poster}}">
             <source src="{{m.url}}" type="video/mp4">
           </video>
           {% else %}
