@@ -57,18 +57,30 @@
       (edn/read-string)
       :accounts))
 
-(defn fetch-all-accounts [credentials oauth-session]
+(defn fetch-accounts
+  "Fetch user and latest tweets for every account in accounts.edn.
+   Returns a seq of {:user ... :tweets ...}. Accounts that fail are skipped."
+  [credentials oauth-session]
   (let [accounts (load-accounts)]
     (println (str "Fetching from " (count accounts) " accounts...\n"))
     (->> accounts
-         (mapcat (fn [handle]
-                   (println (str "  @" handle))
-                   (let [result (api/fetch-tweets-by-screen-name handle credentials oauth-session)]
-                     (if (:error result)
-                       (do (println (str "    Error: " (:error result)))
-                           [])
-                       (:tweets result)))))
-         (sort-by #(parse-twitter-date (:created-at %)) #(.compareTo %2 %1)))))
+         (keep (fn [handle]
+                 (println (str "  @" handle))
+                 (let [result (api/fetch-tweets-by-screen-name handle credentials oauth-session)]
+                   (if (:error result)
+                     (println (str "    Error: " (:error result)))
+                     (select-keys result [:user :tweets])))))
+         (doall))))
+
+(defn merge-timeline
+  "Merge the tweets of all accounts into one list, newest first."
+  [account-results]
+  (->> account-results
+       (mapcat :tweets)
+       (sort-by #(parse-twitter-date (:created-at %)) #(.compareTo %2 %1))))
+
+(defn fetch-all-accounts [credentials oauth-session]
+  (merge-timeline (fetch-accounts credentials oauth-session)))
 
 (defn check-env []
   (let [required ["TWITTER_CONSUMER_KEY" "TWITTER_CONSUMER_SECRET"

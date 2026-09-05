@@ -47,6 +47,21 @@
       margin-top: 5px;
     }
 
+    .accounts {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      font-size: 0.85rem;
+    }
+
+    .accounts a {
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    .accounts a:hover { text-decoration: underline; }
+
     .tweet {
       padding: 16px 0;
       border-bottom: 1px solid var(--border);
@@ -291,6 +306,9 @@
   <header>
     <h1>bbitter <span>/ curated feed</span></h1>
     <div class="meta">{{tweet-count}} tweets from {{account-count}} accounts &middot; {{generated-at}}</div>
+    <nav class="accounts">
+      {% for a in accounts %}<a href="/@{{a.screen-name}}">@{{a.screen-name}}</a>{% endfor %}
+    </nav>
   </header>
 
   <main>

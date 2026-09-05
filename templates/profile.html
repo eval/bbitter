@@ -394,6 +394,7 @@
       </div>
     </div>
 
+    {% if not static %}
     <nav class="profile-nav">
       {% if top %}
       <a href="/@{{user.screen-name}}">Latest</a>
@@ -403,6 +404,7 @@
       <a href="/@{{user.screen-name}}/top">Highlights</a>
       {% endif %}
     </nav>
+    {% endif %}
 
     {% if tweets %}
     {% for tweet in tweets %}
