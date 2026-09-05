@@ -5,3 +5,5 @@
 !/tmp/.keep
 /public/*
 !/public/.keep
+
+/accounts.edn

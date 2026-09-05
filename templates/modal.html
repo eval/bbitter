@@ -1,0 +1,48 @@
+<div id="modal" class="modal" onclick="closeModal()">
+  <span class="modal-close">&times;</span>
+  <span class="modal-nav modal-prev" onclick="event.stopPropagation(); navImage(-1)">&#10094;</span>
+  <img class="modal-content" id="modal-img" onclick="event.stopPropagation()">
+  <span class="modal-nav modal-next" onclick="event.stopPropagation(); navImage(1)">&#10095;</span>
+</div>
+
+<script>
+  var currentImages = [];
+  var currentIndex = 0;
+
+  function openModal(src, images) {
+    currentImages = images || [src];
+    currentIndex = currentImages.indexOf(src);
+    if (currentIndex < 0) currentIndex = 0;
+    showImage();
+    document.getElementById('modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    updateNav();
+  }
+
+  function showImage() {
+    document.getElementById('modal-img').src = currentImages[currentIndex];
+  }
+
+  function updateNav() {
+    document.querySelector('.modal-prev').style.display = currentImages.length > 1 ? 'block' : 'none';
+    document.querySelector('.modal-next').style.display = currentImages.length > 1 ? 'block' : 'none';
+  }
+
+  function navImage(dir) {
+    currentIndex = (currentIndex + dir + currentImages.length) % currentImages.length;
+    showImage();
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (document.getElementById('modal').style.display === 'flex') {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'ArrowLeft') navImage(-1);
+      if (e.key === 'ArrowRight') navImage(1);
+    }
+  });
+</script>

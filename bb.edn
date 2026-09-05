@@ -1,18 +1,15 @@
 {:paths ["src"]
- :deps  {cheshire/cheshire            {:mvn/version "5.13.0"}
-         io.github.borkdude/quickblog {:git/sha "425fac90c1f0fb02b8124233ab324657907b64be"}
-         org.babashka/http-server     {:mvn/version "0.1.13"}}
- :tasks {:requires ([quickblog.cli :as cli])
-         :init     (def opts {:blog-title       "REPL adventures"
-                              :blog-description "A blog about blogging quickly"})
-         quickblog {:doc  "Start blogging quickly! Run `bb quickblog help` for details."
-                    :task (cli/dispatch opts)}
-         itter     {:doc      "Fetch tweets from a user"
-                    :requires ([bbitter.cli :as cli])
-                    :task     (apply cli/-main *command-line-args*)}
-         render    {:doc      "Generate static site"
-                    :requires ([bbitter.render :as render])
-                    :task     (render/-main)}
-         serve     {:doc      "Serve static site with video proxy"
-                    :requires ([bbitter.server :as server])
-                    :task     (server/-main "1889" "public")}}}
+ :deps  {cheshire/cheshire         {:mvn/version "5.13.0"}
+         org.babashka/http-server  {:mvn/version "0.1.13"}}
+ :tasks {fetch  {:doc      "Fetch tweets for all accounts into tmp/feed.edn"
+                 :requires ([bbitter.fetch :as fetch])
+                 :task     (fetch/-main)}
+         render {:doc      "Render tmp/feed.edn into public/"
+                 :requires ([bbitter.render :as render])
+                 :task     (render/-main)}
+         build  {:doc     "Fetch then render"
+                 :depends [fetch render]}
+         serve  {:doc      "Serve public/ locally for preview"
+                 :requires ([babashka.http-server :as http-server])
+                 :task     (do (http-server/serve {:port 1889 :dir "public"})
+                               (deref (promise)))}}}
